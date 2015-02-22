@@ -1,0 +1,36 @@
+Kakoune YouCompleteMe Script
+============================
+
+This script provides YouCompleteMe support via ycmd in Kakoune.
+
+Usage
+-----
+
+To use that script, two options must be set:
+
+* +ycmd_path+: path of the ycmd python directory, on a cloned
+               ycmd repo, that would be $REPO/ycmd
+
+* +ycmd_port+: (defaulting to 12345) port to use for ycmd.
+
+The cpp part of ycmd must be compiled manually, with clang
+support.
+
+Ycmd completion can be enabled with ycmd-enable-autocomplete
+command.
+
+To automate its activation, use a hook:
+
+---
+hook global WinSetOption filetype=cpp %{ ycmd-enable-autocomplete }
+hook global WinSetOption filetype=(?!cpp).* %{ ycmd-diable-autocomplete }
+---
+
+Dependencies
+------------
+
+* +Jq+ for json parsing
+* +OpenSSL+ for HMAC validation
+* +base64+ for key encoding.
+* +curl+ for http access
+
