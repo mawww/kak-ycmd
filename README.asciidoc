@@ -3,10 +3,14 @@ Kakoune YouCompleteMe Script
 
 This script provides YouCompleteMe support via ycmd in Kakoune.
 
+It works for C/C++ with the clang completer, other languages
+are not tested yet.
+
 Usage
 -----
 
-To use that script, two options must be set:
+To use that script, link to it in ~/.config/kak/autoload, and
+set options in your kakrc:
 
 * +ycmd_path+: path of the ycmd python directory, on a cloned
                ycmd repo, that would be $REPO/ycmd
@@ -29,7 +33,7 @@ hook global WinSetOption filetype=(?!cpp).* %{ ycmd-diable-autocomplete }
 Dependencies
 ------------
 
-* +Jq+ for json parsing
+* +jq+ for json parsing
 * +OpenSSL+ for HMAC validation
 * +base64+ for key encoding.
 * +curl+ for http access
