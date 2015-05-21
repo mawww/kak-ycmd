@@ -12,7 +12,8 @@ def ycmd-launch %{ %sh{
     fi
 
     dir=$(mktemp -d -t kak-ycmd.XXXXXXXX)
-    key=$(dd if=/dev/urandom bs=16 count=1 status=none | base64 -w0)
+    # Avoid null bytes in the key, as we need to pass it as an argument to openssl
+    key=$(dd if=/dev/urandom bs=16 count=1 status=none | tr '\0' '@' | base64 -w0)
     mkfifo ${dir}/fifo
 
     cat > ${dir}/options.json <<EOF
@@ -77,6 +78,10 @@ def ycmd-complete %{
         # As completions references a cursor position and a buffer timestamp, only valid completions should be
         # displayed.
         (
+            key=$(echo -n "${kak_opt_ycmd_hmac_key}" | base64 -d -w0)
+
+            compute_hmac() { openssl dgst -sha256 -hmac "$key" -binary; }
+
             query="{
                 \"line_num\": $kak_cursor_line,
                 \"column_num\": $kak_cursor_column,
@@ -88,14 +93,20 @@ def ycmd-complete %{
                     }
                 }
             }"
-            key=$(echo -n "${kak_opt_ycmd_hmac_key}" | base64 -d -w0)
             port=${kak_opt_ycmd_port}
-            hexhmac=$(echo -n "$query" | openssl dgst -sha256 -hmac "$key" -hex | cut  -d ' ' -f 2)
-httphdr="Content-Type: application/json; charset=utf8
-X-Ycm-Hmac: $(echo -n $hexhmac | base64 -w0)"
+            path="/completions"
+            method="POST"
 
-            json=$(curl -H "$httphdr" http://127.0.0.1:${port}/completions -d "$query" 2> ${dir}/curloutput)
-            compl=$(echo -n "$json" | jq -j '.completions[] | "\(.insertion_text)@\(.detailed_info)" | gsub(":"; "\\:") + ":"' 2> ${dir}/jqoutput)
+            path_hmac=$(echo -n "$path" | compute_hmac | base64 -w0)
+            method_hmac=$(echo -n "$method" | compute_hmac | base64 -w0)
+            body_hmac=$(echo -n "$query" | compute_hmac | base64 -w0)
+            hmac=$(echo -n "${method_hmac}${path_hmac}${body_hmac}" | base64 -d -w0 | compute_hmac | base64 -w0)
+
+httphdr="Content-Type: application/json; charset=utf8
+X-Ycm-Hmac: $hmac"
+
+            json=$(curl -H "$httphdr" "http://127.0.0.1:${port}${path}" -d "$query" 2> ${dir}/curl-err)
+            compl=$(echo -n "$json" | jq -j '.completions[] | "\(.insertion_text)@\(.detailed_info)" | gsub(":"; "\\:") + ":"' 2> ${dir}/jq-err)
 
             header="${kak_cursor_line}.${kak_cursor_column}@${kak_timestamp}"
             echo "eval -client ${kak_client} %[ echo completed; set 'buffer=${kak_buffile}' ycmd_completions %[${header}:${compl}] ]" | kak -p ${kak_session}
