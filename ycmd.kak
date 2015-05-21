@@ -44,7 +44,7 @@ def ycmd-launch %{ %sh{
 EOF
     echo "set global ycmd_tmp_dir ${dir}
           set global ycmd_hmac_key ${key}
-          hook global KakEnd .* %{ nop %sh{ kill \${kak_opt_ycmd_pid} } }
+          hook global KakEnd .* %{ ycmd-stop }
           eval -draft %{
               edit! -fifo ${dir}/fifo *ycmd-output*
               hook buffer BufCloseFifo .* %{ nop %sh{ rm -r ${dir} } }
@@ -55,6 +55,11 @@ EOF
         echo "set global ycmd_pid '$!'" | kak -p ${kak_session}
     ) > /dev/null 2>&1 < /dev/null &
 } }
+
+def ycmd-stop %{
+    nop %sh{ kill ${kak_opt_ycmd_pid} }
+    set global ycmd_pid 0
+}
 
 def ycmd-complete %{
     %sh{
