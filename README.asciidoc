@@ -25,10 +25,10 @@ command.
 
 To automate its activation, use a hook:
 
--------------------------------------------------------------------------
+--------------------------------------------------------------------------
 hook global WinSetOption filetype=cpp %{ ycmd-enable-autocomplete }
-hook global WinSetOption filetype=(?!cpp).* %{ ycmd-diable-autocomplete }
--------------------------------------------------------------------------
+hook global WinSetOption filetype=(?!cpp).* %{ ycmd-disable-autocomplete }
+--------------------------------------------------------------------------
 
 Dependencies
 ------------
