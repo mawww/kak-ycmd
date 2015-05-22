@@ -108,8 +108,9 @@ X-Ycm-Hmac: $hmac"
 
             json=$(curl -H "$httphdr" "http://127.0.0.1:${port}${path}" -d "$query" 2> ${dir}/curl-err)
             compl=$(echo -n "$json" | jq -j '.completions[] | "\(.insertion_text)@\(.detailed_info)" | gsub(":"; "\\:") + ":"' 2> ${dir}/jq-err)
+            column=$(echo -n "$json" | jq -j .completion_start_column 2>> ${dir}/jq-err)
 
-            header="${kak_cursor_line}.${kak_cursor_column}@${kak_timestamp}"
+            header="${kak_cursor_line}.${column}@${kak_timestamp}"
             echo "eval -client ${kak_client} %[ echo completed; set 'buffer=${kak_buffile}' ycmd_completions %[${header}:${compl}] ]" | kak -p ${kak_session}
         ) > /dev/null 2>&1 < /dev/null &
     }
