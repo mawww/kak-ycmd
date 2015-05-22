@@ -86,6 +86,7 @@ def ycmd-complete %{
                 \"line_num\": $kak_cursor_line,
                 \"column_num\": $kak_cursor_column,
                 \"filepath\": \"$kak_buffile\",
+                \"force_semantic\": true,
                 \"file_data\": {
                     \"$kak_buffile\": {
                         \"filetypes\": [ \"$kak_opt_filetype\" ],
