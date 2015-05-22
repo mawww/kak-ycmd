@@ -6,7 +6,7 @@ decl -hidden str ycmd_hmac_key
 decl -hidden str ycmd_tmp_dir
 decl -hidden str-list ycmd_completions
 
-def ycmd-launch %{ %sh{
+def ycmd-start %{ %sh{
     if [ -z "${kak_opt_ycmd_path}" ]; then
         echo "echo -color Error 'ycmd_path option must be set to the ycmd/ycmd dir'"
     fi
@@ -58,15 +58,15 @@ EOF
 } }
 
 def ycmd-stop %{
-    nop %sh{ kill ${kak_opt_ycmd_pid} }
+    nop %sh{ if (( ${kak_opt_ycmd_pid} != 0 )); then kill ${kak_opt_ycmd_pid}; fi }
     set global ycmd_pid 0
 }
 
 def ycmd-complete %{
     %sh{
         if [ ${kak_opt_ycmd_pid} -eq 0 ]; then
-            echo "echo 'auto launching ycmd server'
-                  ycmd-launch"
+            echo "echo 'auto starting ycmd server'
+                  ycmd-start"
         fi
     }
     %sh{ echo "write ${kak_opt_ycmd_tmp_dir}/buf.cpp" }
