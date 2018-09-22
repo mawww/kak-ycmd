@@ -28,7 +28,7 @@ def ycmd-start %{ evaluate-commands %sh{
   "collect_identifiers_from_comments_and_strings": 0,
   "collect_identifiers_from_tags_files": 0,
   "extra_conf_globlist": [],
-  "global_ycm_extra_conf": "",
+  "global_ycm_extra_conf": "${kak_opt_ycmd_path}/../.ycm_extra_conf.py",
   "confirm_extra_conf": 0,
   "complete_in_comments": 0,
   "complete_in_strings": 1,
