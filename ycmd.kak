@@ -4,9 +4,9 @@ decl int ycmd_port 12345
 decl -hidden int ycmd_pid 0
 decl -hidden str ycmd_hmac_key
 decl -hidden str ycmd_tmp_dir
-decl -hidden str-list ycmd_completions
+decl -hidden completions ycmd_completions
 
-def ycmd-start %{ %sh{
+def ycmd-start %{ evaluate-commands %sh{
     if [ -z "${kak_opt_ycmd_path}" ]; then
         echo "echo -color Error 'ycmd_path option must be set to the ycmd/ycmd dir'"
     fi
@@ -39,7 +39,7 @@ def ycmd-start %{ %sh{
   "auto_stop_csharp_server": 1,
   "use_ultisnips_completer": 1,
   "csharp_server_port": 2000,
-  "hmac_secret": "'$key'",
+  "hmac_secret": "$key",
   "server_keep_logfiles": 0
 }
 EOF
@@ -52,33 +52,33 @@ EOF
           }"
 
     (
-        python ${kak_opt_ycmd_path} --port ${kak_opt_ycmd_port} --options_file ${dir}/options.json --log debug > ${dir}/fifo 2>&1 &
-        echo "set global ycmd_pid '$!'" | kak -p ${kak_session}
+        python3 ${kak_opt_ycmd_path} --port ${kak_opt_ycmd_port} --options_file ${dir}/options.json --log debug > ${dir}/fifo 2>&1 &
+        echo "set global ycmd_pid $!" | kak -p ${kak_session}
     ) > /dev/null 2>&1 < /dev/null &
 } }
 
 def ycmd-stop %{
-    nop %sh{ if (( ${kak_opt_ycmd_pid} != 0 )); then kill ${kak_opt_ycmd_pid}; fi }
+    nop %sh{ if [ ${kak_opt_ycmd_pid} -gt 0 ]; then kill ${kak_opt_ycmd_pid}; fi }
     set global ycmd_pid 0
 }
 
 def ycmd-complete %{
-    %sh{
+    evaluate-commands %sh{
         if [ ${kak_opt_ycmd_pid} -eq 0 ]; then
             echo "echo 'auto starting ycmd server'
                   ycmd-start"
         fi
     }
-    %sh{ echo "write ${kak_opt_ycmd_tmp_dir}/buf.cpp" }
+    evaluate-commands %sh{ echo "write ${kak_opt_ycmd_tmp_dir}/buf.cpp" }
     # end the previous %sh{} so that its output gets interpreted by kakoune
     # before launching the following as a background task.
-    %sh{
+    evaluate-commands %sh{
         dir=${kak_opt_ycmd_tmp_dir}
         # this runs in a detached shell, asynchronously, so that kakoune does not hang while ycmd is running.
         # As completions references a cursor position and a buffer timestamp, only valid completions should be
         # displayed.
         (
-            key=$(echo -n "${kak_opt_ycmd_hmac_key}" | base64 -d -w0)
+            key=$(printf '%s' "${kak_opt_ycmd_hmac_key}" | base64 -d -w0)
 
             compute_hmac() { openssl dgst -sha256 -hmac "$key" -binary; }
 
@@ -90,7 +90,7 @@ def ycmd-complete %{
                 \"file_data\": {
                     \"$kak_buffile\": {
                         \"filetypes\": [ \"$kak_opt_filetype\" ],
-                        \"contents\": $(jq -R -s . < $dir/buf.cpp)
+                        \"contents\": $(jq -Rs . $dir/buf.cpp)
                     }
                 }
             }"
@@ -98,34 +98,37 @@ def ycmd-complete %{
             path="/completions"
             method="POST"
 
-            path_hmac=$(echo -n "$path" | compute_hmac | base64 -w0)
-            method_hmac=$(echo -n "$method" | compute_hmac | base64 -w0)
-            body_hmac=$(echo -n "$query" | compute_hmac | base64 -w0)
-            hmac=$(echo -n "${method_hmac}${path_hmac}${body_hmac}" | base64 -d -w0 | compute_hmac | base64 -w0)
+            path_hmac=$(printf '%s' "$path" | compute_hmac | base64 -w0)
+            method_hmac=$(printf '%s' "$method" | compute_hmac | base64 -w0)
+            body_hmac=$(printf '%s' "$query" | compute_hmac | base64 -w0)
+            hmac=$(printf '%s' "${method_hmac}${path_hmac}${body_hmac}" | base64 -d -w0 | compute_hmac | base64 -w0)
 
 httphdr="Content-Type: application/json; charset=utf8
 X-Ycm-Hmac: $hmac"
 
             json=$(curl -H "$httphdr" "http://127.0.0.1:${port}${path}" -d "$query" 2> ${dir}/curl-err)
-            compl=$(echo -n "$json" | jq -j '.completions[] | "\(.insertion_text)@\(.detailed_info)" | gsub(":"; "\\:") + ":"' 2> ${dir}/jq-err)
-            column=$(echo -n "$json" | jq -j .completion_start_column 2>> ${dir}/jq-err)
-
+            compl=$(printf '%s' "$json" | jq -j '.completions[] | "\(.insertion_text)|\(.menu_text)|\(.insertion_text)" | gsub(":"; "\\:") + ":"' 2> ${dir}/jq-err | head -c -1)
+            column=$(printf '%s' "$json" | jq -j .completion_start_column 2>> ${dir}/jq-err)
             header="${kak_cursor_line}.${column}@${kak_timestamp}"
-            echo "eval -client ${kak_client} %[ echo completed; set 'buffer=${kak_buffile}' ycmd_completions %[${header}:${compl}] ]" | kak -p ${kak_session}
+            compl="${header}:${compl}"
+            compl="${compl//(/[}"
+            compl="${compl//)/]}"
+            echo "eval -client ${kak_client} %(echo completed; set 'buffer=${kak_buffile}' ycmd_completions %(${compl}) )" | kak -p ${kak_session}
         ) > /dev/null 2>&1 < /dev/null &
     }
 }
 
 def ycmd-enable-autocomplete %{
-    set window completers %sh{ echo "'option=ycmd_completions:${kak_opt_completers}'" }
-    hook window -group ycmd-autocomplete InsertIdle .* %{ try %{
-        exec -draft <a-h><a-k>(\.|->|::).\'<ret>
+    set buffer ycmd_completions %opt{ycmd_completions}
+    set -add buffer completers option=ycmd_completions
+    hook -group ycmd_autocomplete window InsertIdle .* %{ try %{
+        exec -draft <a-h><a-k>(\.|->|::).<ret>
         echo 'completing...'
         ycmd-complete
     } }
 }
 
 def ycmd-disable-autocomplete %{
-    set window completers %sh{ echo "'${kak_opt_completers}'" | sed -e 's/option=ycmd_completions://g' }
-    rmhooks window ycmd-autocomplete
+    rmhooks window ycmd_autocomplete
+    unset-option buffer ycmd_completions
 }
