@@ -3,22 +3,31 @@ Kakoune YouCompleteMe Script
 
 This script provides YouCompleteMe support via ycmd in Kakoune.
 
-It works for C/C++ with the clang completer, other languages
-are not tested yet.
+Install
+-------
+
+Clone `kak-ycmd` in `$HOME/.local/share`
+
+> git clone https://github.com/negativedensity/kak-ycmd.git $HOME/.local/share
+
+Init submodules, may take some time since ycmd is bundled.
+
+> cd `$HOME/.local/share/kak-ycmd`
+> git submodule update --init --recursive
+
+Go to `ycmd` subdirectory and build ycmd.
+See https://github.com/Valloric/ycmd#building for instructions and required dependencies.
+Below is the command for building only the Clang completer.
+
+> cd ycmd
+> python3 build.py --clang-completer
+
+Finally, link `ycmd.kak` in `autoload`.
+
+> ln -sv `$HOME/.local/share/kak-ycmd/ycmd.kak` `$HOME/.config/kak/autoload/ycmd.kak`
 
 Usage
 -----
-
-To use that script, link to it in ~/.config/kak/autoload, and
-set options in your kakrc:
-
-* +ycmd_path+: path of the ycmd python directory, on a cloned
-               ycmd repo, that would be $REPO/ycmd
-
-* +ycmd_port+: (defaulting to 12345) port to use for ycmd.
-
-The cpp part of ycmd must be compiled manually, with clang
-support.
 
 Ycmd completion can be enabled with ycmd-enable-autocomplete
 command.
@@ -29,6 +38,17 @@ To automate its activation, use a hook:
 hook global WinSetOption filetype=cpp %{ ycmd-enable-autocomplete }
 hook global WinSetOption filetype=(?!cpp).* %{ ycmd-disable-autocomplete }
 --------------------------------------------------------------------------
+
+Options
+-------
+
+* +kak_ycmd_path+: (defaulting to `$HOME/.local/share/kak-ycmd`) path of the kak-ycmd directory.
+
+* +ycmd_settings_template_path+: (defaulting to `<kak_ycmd_path>/default_settings.json.template`) template to as ycmd's settings file.
+The JSON needs to have a `"hmac_secret": "__HMAC_SECRET__"` entry.
+See the default file for details.
+
+* +ycmd_port+: (defaulting to 12345) port to use for ycmd.
 
 Dependencies
 ------------
