@@ -9,7 +9,7 @@ Install
 
 ```bash
 # Clone kak-ycmd in $HOME/.local/share
-git clone https://github.com/negativedensity/kak-ycmd.git $HOME/.local/share```
+git clone https://github.com/negativedensity/kak-ycmd.git $HOME/.local/share
 
 # Init submodules, may take some time since ycmd is bundled.
 cd $HOME/.local/share/kak-ycmd
