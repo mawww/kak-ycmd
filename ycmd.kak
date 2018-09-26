@@ -14,7 +14,7 @@ def ycmd-start %{ evaluate-commands %sh{
     mkfifo ${dir}/fifo
 
     cp "${kak_opt_ycmd_settings_template_path}" ${dir}/options.json
-    sed -i -e "s/__HMAC_SECRET__/${key}/g" ${dir}/options.json
+    sed -i -e "s*__HMAC_SECRET__*${key}*g" ${dir}/options.json
 
     echo "set global ycmd_tmp_dir ${dir}
           set global ycmd_hmac_key ${key}
@@ -95,7 +95,6 @@ def ycmd-enable-autocomplete %{
     set buffer ycmd_completions %opt{ycmd_completions}
     set -add buffer completers option=ycmd_completions
     hook -group ycmd_autocomplete window InsertIdle .* %{ try %{
-        exec -draft <a-h><a-k>(\.|->|::).<ret>
         echo 'completing...'
         ycmd-complete
     } }
