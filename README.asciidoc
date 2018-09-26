@@ -7,24 +7,21 @@ Install
 -------
 
 
-```console
+```bash
 # Clone kak-ycmd in $HOME/.local/share
 git clone https://github.com/negativedensity/kak-ycmd.git $HOME/.local/share```
 
 # Init submodules, may take some time since ycmd is bundled.
-
 cd $HOME/.local/share/kak-ycmd
 git submodule update --init --recursive
 
 # Go to ycmd subdirectory and build ycmd.
 # See https://github.com/Valloric/ycmd#building for instructions and required dependencies.
 # Below is the command for building only the Clang completer.
-
 cd ycmd
 python3 build.py --clang-completer
 
 # Finally, link ycmd.kak in autoload.
-
 ln -sv $HOME/.local/share/kak-ycmd/ycmd.kak $HOME/.config/kak/autoload/ycmd.kak
 ```
 
