@@ -1,4 +1,5 @@
-decl str ycmd_path
+decl str kak_ycmd_path %sh{ echo "$HOME/.local/share/kak-ycmd" }
+decl str ycmd_settings_template_path %sh{ echo "${kak_opt_kak_ycmd_path}/default_settings.json.template" }
 decl int ycmd_port 12345
 
 decl -hidden int ycmd_pid 0
@@ -7,42 +8,14 @@ decl -hidden str ycmd_tmp_dir
 decl -hidden completions ycmd_completions
 
 def ycmd-start %{ evaluate-commands %sh{
-    if [ -z "${kak_opt_ycmd_path}" ]; then
-        echo "echo -color Error 'ycmd_path option must be set to the ycmd/ycmd dir'"
-    fi
-
     dir=$(mktemp -d -t kak-ycmd.XXXXXXXX)
     # Avoid null bytes in the key, as we need to pass it as an argument to openssl
     key=$(dd if=/dev/urandom bs=16 count=1 status=none | tr '\0' '@' | base64 -w0)
     mkfifo ${dir}/fifo
 
-    cat > ${dir}/options.json <<EOF
-{
-  "filepath_completion_use_working_dir": 0,
-  "auto_trigger": 1,
-  "min_num_of_chars_for_completion": 2,
-  "min_num_identifier_candidate_chars": 0,
-  "semantic_triggers": {},
-  "filetype_specific_completion_to_disable": { "gitcommit": 1 },
-  "seed_identifiers_with_syntax": 0,
-  "collect_identifiers_from_comments_and_strings": 0,
-  "collect_identifiers_from_tags_files": 0,
-  "extra_conf_globlist": [],
-  "global_ycm_extra_conf": "${kak_opt_ycmd_path}/../.ycm_extra_conf.py",
-  "confirm_extra_conf": 0,
-  "complete_in_comments": 0,
-  "complete_in_strings": 1,
-  "max_diagnostics_to_display": 30,
-  "filetype_whitelist": { "*": 1 },
-  "filetype_blacklist": { },
-  "auto_start_csharp_server": 1,
-  "auto_stop_csharp_server": 1,
-  "use_ultisnips_completer": 1,
-  "csharp_server_port": 2000,
-  "hmac_secret": "$key",
-  "server_keep_logfiles": 0
-}
-EOF
+    cp "${kak_opt_ycmd_settings_template_path}" ${dir}/options.json
+    sed -i -e "s/__HMAC_SECRET__/${key}/g" ${dir}/options.json
+
     echo "set global ycmd_tmp_dir ${dir}
           set global ycmd_hmac_key ${key}
           hook global KakEnd .* %{ ycmd-stop }
@@ -52,7 +25,7 @@ EOF
           }"
 
     (
-        python3 ${kak_opt_ycmd_path} --port ${kak_opt_ycmd_port} --options_file ${dir}/options.json --log debug > ${dir}/fifo 2>&1 &
+        python3 ${kak_opt_kak_ycmd_path}/ycmd/ycmd --port ${kak_opt_ycmd_port} --options_file ${dir}/options.json --idle_suicide_seconds=7200 --log debug > ${dir}/fifo 2>&1 &
         echo "set global ycmd_pid $!" | kak -p ${kak_session}
     ) > /dev/null 2>&1 < /dev/null &
 } }
