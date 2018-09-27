@@ -21,7 +21,7 @@ def ycmd-start %{ evaluate-commands %sh{
           set global ycmd_hmac_key ${key}
           hook global KakEnd .* %{ ycmd-stop }
           eval -draft %{
-              edit! -fifo ${dir}/fifo *debug*
+              edit! -fifo ${dir}/fifo *ycmd-output*
               hook buffer BufCloseFifo .* %{ nop %sh{ rm -r ${dir} } }
           }"
 
@@ -97,7 +97,7 @@ X-Ycm-Hmac: $hmac"
 
 def ycmd-enable-autocomplete %{
     set buffer ycmd_completions %opt{ycmd_completions}
-    set -add buffer completers option=ycmd_completions
+    set buffer completers word=buffer filename option=ycmd_completions
     hook -group ycmd_autocomplete window InsertIdle .* %{ try %{
         echo 'completing...'
         ycmd-complete
@@ -106,6 +106,7 @@ def ycmd-enable-autocomplete %{
 
 def ycmd-disable-autocomplete %{
     rmhooks window ycmd_autocomplete
+    unset-option buffer completers
     unset-option buffer ycmd_completions
 }
 
