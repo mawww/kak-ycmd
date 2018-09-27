@@ -97,7 +97,7 @@ X-Ycm-Hmac: $hmac"
 
 def ycmd-enable-autocomplete %{
     set buffer ycmd_completions %opt{ycmd_completions}
-    set -add buffer completers option=ycmd_completions
+    set buffer completers option=ycmd_completions
     hook -group ycmd_autocomplete window InsertIdle .* %{ try %{
         echo 'completing...'
         ycmd-complete
@@ -107,6 +107,7 @@ def ycmd-enable-autocomplete %{
 def ycmd-disable-autocomplete %{
     rmhooks window ycmd_autocomplete
     unset-option buffer ycmd_completions
+    unset-option buffer completers
 }
 
 # For debugging: send a request with path $1 and print the response to the debug window
